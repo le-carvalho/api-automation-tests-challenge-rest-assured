@@ -11,9 +11,15 @@ import io.restassured.response.Response;
 import io.restassured.specification.RequestSpecification;
 import org.junit.jupiter.api.*;
 
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
+
+
+import static io.restassured.RestAssured.baseURI;
 import static io.restassured.RestAssured.given;
 import static io.restassured.config.LogConfig.logConfig;
-import static io.restassured.module.jsv.JsonSchemaValidator.*;
+import static io.restassured.module.jsv.JsonSchemaValidator.matchesJsonSchemaInClasspath;
 import static org.hamcrest.Matchers.*;
 
 public class BookingTests {
@@ -22,6 +28,7 @@ public class BookingTests {
     private static Booking booking;
     private static BookingDates bookingDates;
     private static User user;
+    public static String token = "";
 
     @BeforeAll
     public static void Setup(){
@@ -50,7 +57,7 @@ public class BookingTests {
     }
 
     @Test
-    public void getAllBookingsById_returnOk(){
+    public void getAllBookingsId_returnOk(){
             Response response = request
                                     .when()
                                         .get("/booking")
@@ -62,17 +69,29 @@ public class BookingTests {
         Assertions.assertNotNull(response);
         Assertions.assertEquals(200, response.statusCode());
     }
-
+    @Test // Get Booking id list
+    public void getBookingById_returnOk(){
+                given()
+                .contentType("application/json")
+                .log().all()
+                .when()
+                .get(baseURI + "/booking/" + faker.number().digits(2))
+                .then()
+                .log().all()
+                .statusCode(200);
+    }
     @Test
-    public void  getAllBookingsByUserFirstName_BookingExists_returnOk(){
+    public void  getBookingsByUserName_BookingExists_returnOk(){
                     request
+                            .given()
+                            .contentType(ContentType.JSON)
+                            .log().all()
                         .when()
-                            .queryParam("firstName", "Carol")
-                            .get("/booking")
+                            .get(baseURI + "/booking?" + user.getFirstName() + user.getLastName())
                         .then()
+                            .log().all()
                             .assertThat()
                             .statusCode(200)
-                            .contentType(ContentType.JSON)
                         .and()
                         .body("results", hasSize(greaterThan(0)));
 
@@ -94,8 +113,77 @@ public class BookingTests {
                         .statusCode(200)
                         .contentType(ContentType.JSON).and().time(lessThan(2000L));
 
+    }
 
+    @Test
+    public void updatingBooking_ById() throws IOException {
+                //update a current booking id
+               request
+                        .header("Cookie", "token=".concat(token))
+                        .log().all()
+                //adding put method
+                        .body(booking)
+                .when()
+                        .put("/booking/" + faker.number().digits(2))
+                .then()
+                        .log().all()
+
+                //verify status code as 200
+                        .assertThat().statusCode(403).and().time(lessThan(2000L));
+    }
+    @Test
+    public void getBookingsByDate_BookingExists_returnOk(){
+        request
+                .when()
+                .queryParam("checkin", 2022-11-21)
+                .get("/booking")
+                .then()
+                .assertThat()
+                .statusCode(200)
+                .contentType(ContentType.JSON)
+                .and()
+                .body("results", hasSize(greaterThan(0)));
 
     }
+    @Test // create token
+    public void createAuthToken(){
+        Map<String, String> body = new HashMap<>();
+        body.put("username", "admin");
+        body.put("password", "password123");
+
+        token = request
+                .header("ContentType", "application/json")
+                .when()
+                .body(body)
+                .post("/auth")
+                .then()
+                .assertThat()
+                .statusCode(200)
+                .extract()
+                .path("token");
+    }
+
+    @Test // Delete booking
+    public void deleteBookingById_returnOk(){
+        request
+                .header("Cookie", "token=".concat(token))
+                .when()
+                .delete("/booking/" + faker.number().digits(2))
+                .then()
+                .assertThat()
+                .statusCode(201);
+
+    }
+
+    @Test // Health check
+    public void healthCheck_returnCreated(){
+        request
+                .when()
+                .get("/ping")
+                .then()
+                .assertThat()
+                .statusCode(201);
+    }
+
 
 }
