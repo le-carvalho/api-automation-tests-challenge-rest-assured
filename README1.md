@@ -1,4 +1,4 @@
-### Desafio: Explorando Rest Assured para automação de testes API
+ ### Desafio: Explorando Rest Assured para automação de testes API
 
 📜 [SLIDES APRESENTADO NO PROJETO ](https://academiapme-my.sharepoint.com/:p:/g/personal/kawan_dio_me/EZdKR9y_VuFOnjnEII7LgWQBbh-QXKAWzqvVOeB2cm-roQ?e=73X2qA)📜
 
@@ -22,6 +22,6 @@ Se te ajudei de alguma forma, ficarei feliz em saber. E caso você conheça algu
 
 
 
-<img src="https://hermes.digitalinnovation.one/tracks/3ae0666b-ad40-4952-be45-5b308a77e360.png" style="width:15%;" />
+<div align="center"><img src="https://hermes.digitalinnovation.one/tracks/3ae0666b-ad40-4952-be45-5b308a77e360.png" style="width:15%;" /></div>
 
 
