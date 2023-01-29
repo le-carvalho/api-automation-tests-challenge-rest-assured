@@ -12,6 +12,8 @@ import io.restassured.specification.RequestSpecification;
 import org.junit.jupiter.api.*;
 
 import java.io.IOException;
+import java.time.LocalDate;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -21,6 +23,7 @@ import static io.restassured.RestAssured.given;
 import static io.restassured.config.LogConfig.logConfig;
 import static io.restassured.module.jsv.JsonSchemaValidator.matchesJsonSchemaInClasspath;
 import static org.hamcrest.Matchers.*;
+@TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 
 public class BookingTests {
     public static Faker faker;
@@ -41,7 +44,11 @@ public class BookingTests {
                 faker.internet().password(8,10),
                 faker.phoneNumber().toString());
 
-        bookingDates = new BookingDates("2018-01-02", "2018-01-03");
+
+        LocalDate checkin = LocalDate.now();
+        LocalDate checkout = checkin.plusDays(faker.number().numberBetween(1,10));
+
+        bookingDates = new BookingDates(checkin.toString(), checkout.toString());
         booking = new Booking(user.getFirstName(), user.getLastName(),
                 (float)faker.number().randomDouble(2, 50, 100000),
                 true,bookingDates,
@@ -56,7 +63,27 @@ public class BookingTests {
                 .auth().basic("admin", "password123");
     }
 
+    @Test // create token
+    @Order(1)
+    public void createAuthToken(){
+        Map<String, String> body = new HashMap<>();
+        body.put("username", "admin");
+        body.put("password", "password123");
+
+        token = request
+                .header("ContentType", "application/json")
+                .when()
+                .body(body)
+                .post("/auth")
+                .then()
+                .assertThat()
+                .statusCode(200)
+                .extract()
+                .path("token");
+    }
+
     @Test
+    @Order(2)
     public void getAllBookingsId_returnOk(){
             Response response = request
                                     .when()
@@ -70,6 +97,7 @@ public class BookingTests {
         Assertions.assertEquals(200, response.statusCode());
     }
     @Test // Get Booking id list
+    @Order(3)
     public void getBookingById_returnOk(){
                 given()
                 .contentType("application/json")
@@ -81,6 +109,7 @@ public class BookingTests {
                 .statusCode(200);
     }
     @Test
+    @Order(4)
     public void  getBookingsByUserName_BookingExists_returnOk(){
                     request
                             .given()
@@ -98,6 +127,23 @@ public class BookingTests {
     }
 
     @Test
+    @Order(5)
+    public void getBookingsByDate_BookingExists_returnOk(){
+        request
+                .when()
+                .queryParam("checkin", booking.getBookingdates().getCheckin())
+                .get("/booking")
+                .then()
+                .assertThat()
+                .statusCode(200)
+                .contentType(ContentType.JSON)
+                .and()
+                .body("results", hasSize(greaterThan(0)));
+
+    }
+
+    @Test
+    @Order(6)
     public void  CreateBooking_WithValidData_returnOk(){
 
         Booking test = booking;
@@ -116,54 +162,31 @@ public class BookingTests {
     }
 
     @Test
-    public void updatingBooking_ById() throws IOException {
+    @Order(7)
+    public void updateBooking_ById() throws IOException {
                 //update a current booking id
-               request
-                        .header("Cookie", "token=".concat(token))
-                        .log().all()
+        faker = new Faker();
+        LocalDate checkin = LocalDate.now();
+        LocalDate checkout = checkin.plusDays(faker.number().numberBetween(1,9));
+        bookingDates = new BookingDates(checkin.toString(), checkout.toString());
+
+        Booking bookUpdate = new Booking(user.getFirstName(), user.getLastName(),
+                (float)faker.number().randomDouble(2, 50, 100000),
+                true,bookingDates, "");
+        request
+                .header("Cookie", "token=".concat(token))
                 //adding put method
-                        .body(booking)
                 .when()
+                        .body(bookUpdate)
                         .put("/booking/" + faker.number().digits(2))
                 .then()
-                        .log().all()
-
                 //verify status code as 200
-                        .assertThat().statusCode(403).and().time(lessThan(2000L));
-    }
-    @Test
-    public void getBookingsByDate_BookingExists_returnOk(){
-        request
-                .when()
-                .queryParam("checkin", 2022-11-21)
-                .get("/booking")
-                .then()
-                .assertThat()
-                .statusCode(200)
-                .contentType(ContentType.JSON)
-                .and()
-                .body("results", hasSize(greaterThan(0)));
-
-    }
-    @Test // create token
-    public void createAuthToken(){
-        Map<String, String> body = new HashMap<>();
-        body.put("username", "admin");
-        body.put("password", "password123");
-
-        token = request
-                .header("ContentType", "application/json")
-                .when()
-                .body(body)
-                .post("/auth")
-                .then()
-                .assertThat()
-                .statusCode(200)
-                .extract()
-                .path("token");
+                        .assertThat().statusCode(200)
+                        .and().time(lessThan(2000L));
     }
 
     @Test // Delete booking
+    @Order(8)
     public void deleteBookingById_returnOk(){
         request
                 .header("Cookie", "token=".concat(token))
@@ -176,6 +199,7 @@ public class BookingTests {
     }
 
     @Test // Health check
+    @Order(9)
     public void healthCheck_returnCreated(){
         request
                 .when()
